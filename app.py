@@ -3,6 +3,7 @@ import numpy as np
 import pyautogui
 import cv2
 import train
+import math, time
 
 ANSWERS = ['R', 'G', 'B', 'L', 'D', 'H', 'J']
 
@@ -21,14 +22,7 @@ def get_model():
 def get_orb_images():
     images = []
 
-    image = pyautogui.screenshot()
-    image = np.array(image)
-    x = 733
-    y = 588
-    h = 377
-    w = 452
-    image = image[:, :, ::-1].copy()
-    image = image[y:y+h, x:x+w]
+    image = screenshot()
 
     for row in range(0, 5):
         for column in range(0, 6):
@@ -53,16 +47,42 @@ def generate_board_string():
         board_string += ANSWERS[get_model().predict([image])[0]]
     return board_string
 
-
-def debug_window():
+def screenshot():
     image = pyautogui.screenshot()
     image = np.array(image)
-    x = 733
-    y = 588
+    x = 734
+    y = 520
     h = 377
     w = 452
     image = image[:, :, ::-1].copy()
     image = image[y:y+h, x:x+w]
+    return image
+
+def solve_window(board_string, index):
+    image = screenshot()
+    column = index % 6
+    row = math.floor(index/6)
+    print(f"col: {column}")
+    print(f"row: {row}")
+    x = (76 * column) - column
+    y = (76 * row) - row
+    dx = x + 75
+    dy = y + 75
+
+    prediction = board_string[index]
+    #print(prediction)
+    image = cv2.putText(image, prediction, (x + 38, y + 38),
+                        cv2.FONT_HERSHEY_PLAIN, 1.2, (0, 0, 0))
+    image = cv2.putText(image, prediction, (x + 37, y + 37),
+                        cv2.FONT_HERSHEY_PLAIN, 1.2, (row * 40, column * 40, 255))
+    image = cv2.rectangle(image, (x, y), (dx, dy), (255, 255, 255), 1)
+
+    cv2.imshow("Screenshot", image)
+    cv2.waitKey(100)
+    time.sleep(1000)
+
+def debug_window():
+    image = screenshot()
 
     board_string = generate_board_string()
     for row in range(0, 5):
@@ -73,6 +93,7 @@ def debug_window():
             dy = y + 75
 
             prediction = board_string[row * 6 + column]
+            print(prediction)
             image = cv2.putText(image, prediction, (x + 38, y + 38),
                                 cv2.FONT_HERSHEY_PLAIN, 1.2, (0, 0, 0))
             image = cv2.putText(image, prediction, (x + 37, y + 37),

@@ -2,6 +2,7 @@ import random
 import app
 import board
 
+from itertools import chain 
 
 def get_best_moveset(board_string, iterations, min, max):
     best_path = None
@@ -26,9 +27,17 @@ def get_best_moveset(board_string, iterations, min, max):
 
 def solve():
     board_string = app.generate_board_string()
-    move_set = get_best_moveset(board_string, 1000, 5, 40)
+    move_set = get_best_moveset(board_string, 2000, 5, 40)
+    #res = list(chain.from_iterable(move_set)) 
+    
 
-    print(move_set)
+    for key in move_set:
+        index = key
+        for val in move_set[1]: 
+            print(val)
+        print(f"index: {index}, key: {key}")
+        app.solve_window(board_string, index)
+        
 
 
 if __name__ == "__main__":
