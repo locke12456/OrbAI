@@ -26,7 +26,31 @@ class Move(Enum):
             return False
 
         return True
+     
+    def position(self):
 
+        if self == Move.right:
+            return (0, 1)
+        if self == Move.left:
+            return (0,-1)
+        if self == Move.up:
+            return (-1, 0)
+        if self == Move.down:
+            return (1, 0)
+
+        return (0, 0)
+    def calc_position(self, index):
+        column = index % 6
+        row = math.floor(index/6)
+        r, c = self.position()
+        column += c
+        row += r
+        index = row*6 + column
+        print(f"c, r: {c}, {r}")
+        print(f"index: {index}")
+        print(f"col: {column}")
+        print(f"row: {row}")
+        return index, column, row
 
 def get_available_moves(index):
     moves = []

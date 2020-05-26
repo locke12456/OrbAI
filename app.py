@@ -2,8 +2,9 @@ import pickle
 import numpy as np
 import pyautogui
 import cv2
-import train
+import train, move
 import math, time
+import asyncio
 
 ANSWERS = ['R', 'G', 'B', 'L', 'D', 'H', 'J']
 
@@ -58,28 +59,62 @@ def screenshot():
     image = image[y:y+h, x:x+w]
     return image
 
-def solve_window(board_string, index):
-    image = screenshot()
+def calc_start_position(index):
     column = index % 6
     row = math.floor(index/6)
     print(f"col: {column}")
     print(f"row: {row}")
-    x = (76 * column) - column
-    y = (76 * row) - row
-    dx = x + 75
-    dy = y + 75
+    return column, row
 
-    prediction = board_string[index]
-    #print(prediction)
-    image = cv2.putText(image, prediction, (x + 38, y + 38),
-                        cv2.FONT_HERSHEY_PLAIN, 1.2, (0, 0, 0))
-    image = cv2.putText(image, prediction, (x + 37, y + 37),
-                        cv2.FONT_HERSHEY_PLAIN, 1.2, (row * 40, column * 40, 255))
-    image = cv2.rectangle(image, (x, y), (dx, dy), (255, 255, 255), 1)
+def solve_window(board_string, index, moves):
+    #debug_window()
+    id = index
+    
+    while True:
+        index = id
+        image = screenshot()
+        column, row = calc_start_position(index)
+        width = 76
+        hight = 76
+        x = (width * column) - column
+        y = (hight * row) - row
+        dx = x + width-1
+        dy = y + hight-1
 
+        prediction = board_string[index]
+        #print(prediction)
+        image = cv2.putText(image, prediction, (int(x + width/2), int(y + hight/2)),
+                            cv2.FONT_HERSHEY_PLAIN, 1.2, (0, 0, 0))
+        image = cv2.putText(image, prediction, (int(x + width/2-1), int(y + hight/2-1)),
+                            cv2.FONT_HERSHEY_PLAIN, 1.2, (row * 40, column * 40, 255))
+        image = cv2.rectangle(image, (x, y), (dx, dy), (255, 255, 255), 1)
+        red = 255
+        count = 0
+        for move_to in moves:
+            count += 1
+            shift = (count)%5
+            index, c, r = move_to.calc_position(index)
+            x2 = (width * c) - c + shift
+            y2 = (hight * r) - r + shift
+            image = cv2.arrowedLine(image, 
+                            (int(x + width/2), int(y + hight/2)),
+                            (int(x2 + width/2), int(y2 + hight/2)),
+                            (0, 0, red), 2
+                            )
+            x = x2
+            y = y2
+            red -= 5
+            cv2.imshow("Screenshot", image)
+            cv2.waitKey(100)
+            #await asyncio.sleep(1)
+            time.sleep(0.5)
+            pass
+        cv2.imwrite('output.jpg', image)
+        #break
     cv2.imshow("Screenshot", image)
     cv2.waitKey(100)
-    time.sleep(1000)
+    cv2.imwrite('output.jpg', image)
+    #time.sleep(1000)
 
 def debug_window():
     image = screenshot()
@@ -102,6 +137,7 @@ def debug_window():
 
     cv2.imshow("Screenshot", image)
     cv2.waitKey(100)
+    cv2.imwrite('output_0.jpg', image)
 
 
 if __name__ == "__main__":
