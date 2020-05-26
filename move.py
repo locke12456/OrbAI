@@ -46,10 +46,10 @@ class Move(Enum):
         column += c
         row += r
         index = row*6 + column
-        print(f"c, r: {c}, {r}")
-        print(f"index: {index}")
-        print(f"col: {column}")
-        print(f"row: {row}")
+        #print(f"c, r: {c}, {r}")
+        #print(f"index: {index}")
+        #print(f"col: {column}")
+        #print(f"row: {row}")
         return index, column, row
 
 def get_available_moves(index):

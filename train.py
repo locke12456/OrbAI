@@ -15,7 +15,10 @@ def generate_model():
     training_data = []
     training_answer = []
     for file in data:
+        print(file)
+
         training_data.append(cv2.imread('data/' + file, cv2.IMREAD_GRAYSCALE))
+
         training_answer.append(ANSWERS.index(file[0]))
 
     training_data = np.array(training_data)
