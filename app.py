@@ -4,10 +4,9 @@ import pyautogui
 import cv2
 import train, move
 import math, time
-import asyncio
 
 ANSWERS = ['R', 'G', 'B', 'L', 'D', 'H', 'J']
-
+OrbWidth = 76
 
 def get_model():
     model = None
@@ -27,8 +26,8 @@ def get_orb_images():
 
     for row in range(0, 5):
         for column in range(0, 6):
-            width = 76
-            hight = 76
+            width = OrbWidth
+            hight = OrbWidth
             x = (width * column) - column
             y = (hight * row) - row
             dx = x + width-1
@@ -68,13 +67,15 @@ def calc_start_position(index):
     print(f"row: {row}")
     return column, row
 
-def add_arrowedLine(image, red, hight, width, x, y, x2, y2):
+def add_arrowedLine(image, color, x, y, x2, y2):
+    width = OrbWidth
+    hight = OrbWidth
     overlay = image.copy()
     
     cv2.arrowedLine(overlay, 
                     (int(x + width/2), int(y + hight/2)),
                     (int(x2 + width/2), int(y2 + hight/2)),
-                    (0, 0, red), 5
+                    color, 5
                     )
     alpha = 0.6  # Transparency factor.
     # Following line overlays transparent rectangle over the image
@@ -97,62 +98,73 @@ def calc_prediction_position(hight, width, column, row):
     dy = y + hight-1
     return dx, dy, x, y
 
-def check_moving_path(image, image_origin, orbs, column, row):
+def check_moving_path(image, image_origin, orbs, column, row, path):
     if orbs[row] is None:
         orbs[row] = [None] * 6
     if orbs[row][column] is not None:
         orbs = [None] * 5
         orbs[row] = [None] * 6
         image = image_origin.copy()
+        for move_path in path:
+            x = move_path[0][0]
+            y = move_path[0][1]
+            x2 = move_path[1][0]
+            y2 = move_path[1][1]
+            image = add_arrowedLine(image, (255, 255, 255), x, y, x2, y2)
     return image, orbs
+
+def add_moved_path(path, x, y, x2, y2):
+    move_path = []
+    move_path.append([x, y])
+    move_path.append([x2, y2])
+    path.append(move_path)
 
 def solve_window(board_string, index, moves):
     #debug_window()
     id = index
     image_origin = screenshot()
-    while True:
-        index = id
-        frame_array = []
-        image = image_origin.copy()
-        column, row = calc_start_position(index)
-        width = 76
-        hight = 76
-
-        prediction = board_string[index]
-        #dx, dy, x, y = calc_prediction_position(hight, width, column, row)
-        x, y, image = draw_prediction(hight, width, column, row, image, prediction)
-        image_origin = image.copy()
-        red = 255
-        count = 0
-        orbs = [None] * 5
-        for move_to in moves:
-            count += 1
-            shift = (count)%5
-            index, column, row = move_to.calc_position(index)
-            image, orbs = check_moving_path(image, image_origin, orbs, column, row)
-            x2 = (width * column) - column + shift
-            y2 = (hight * row) - row + shift
-            image = add_arrowedLine(image, red, hight, width, x, y, x2, y2)
-            frame_array.append(image)
-
-            if orbs[row][column] is None:
-                orbs[row][column] = True
-            x = x2
-            y = y2
-            pass
-        fps = 1
-        size = (452, 377)
-        out = cv2.VideoWriter('solve.avi',cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
-        for i in range(len(frame_array)):
-            # writing to a image array
-            out.write(frame_array[i])
-        out.release()
-        cv2.imwrite('output.jpg', image)
-        break
-    cv2.imshow("Screenshot", image)
-    cv2.waitKey(100)
+   
+    index = id
+    frame_array = []
+    image = image_origin.copy()
+    column, row = calc_start_position(index)
+    width = OrbWidth
+    hight = OrbWidth
+    
+    prediction = board_string[index]
+    #dx, dy, x, y = calc_prediction_position(hight, width, column, row)
+    x, y, image = draw_prediction(hight, width, column, row, image, prediction)
+    image_origin = image.copy()
+    red = 255
+    count = 0
+    orbs = [None] * 5
+    path = []
+    for move_to in moves:
+        count += 1
+        shift = (count)%5
+        index, column, row = move_to.calc_position(index)
+        image, orbs = check_moving_path(image, image_origin, orbs, column, row, path)
+        x2 = (width * column) - column + shift
+        y2 = (hight * row) - row + shift
+        image = add_arrowedLine(image, (0, 0, red), x, y, x2, y2)
+        add_moved_path(path,x, y, x2, y2)
+        frame_array.append(image)
+        
+        if orbs[row][column] is None:
+            orbs[row][column] = True
+        x = x2
+        y = y2
+        pass
+    fps = 1
+    size = (452, 377)
+    out = cv2.VideoWriter('solve.avi',cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
+    for i in range(len(frame_array)):
+        # writing to a image array
+        out.write(frame_array[i])
+    out.release()
     cv2.imwrite('output.jpg', image)
-    #time.sleep(1000)
+    cv2.imshow("Screenshot", image)
+    cv2.waitKey(0)
 
 def debug_window():
     image = screenshot()
@@ -160,8 +172,8 @@ def debug_window():
     board_string = generate_board_string()
     for row in range(0, 5):
         for column in range(0, 6):
-            width = 76
-            hight = 76
+            width = OrbWidth
+            hight = OrbWidth
             prediction = board_string[row * 6 + column]
             
             x, y, image = draw_prediction(hight, width, column, row, image, prediction)
