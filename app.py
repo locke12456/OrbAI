@@ -68,61 +68,79 @@ def calc_start_position(index):
     print(f"row: {row}")
     return column, row
 
-def add_arrowedLine(hight, image, red, width, x, x2, y, y2):
+def add_arrowedLine(image, red, hight, width, x, y, x2, y2):
     overlay = image.copy()
     
     cv2.arrowedLine(overlay, 
                     (int(x + width/2), int(y + hight/2)),
                     (int(x2 + width/2), int(y2 + hight/2)),
-                    (0, 0, red), 2
+                    (0, 0, red), 5
                     )
     alpha = 0.6  # Transparency factor.
     # Following line overlays transparent rectangle over the image
     image = cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0)
     return image
 
+def draw_prediction(hight, width, column, row, image, prediction):
+    dx, dy, x, y = calc_prediction_position(hight, width, column, row)
+    image = cv2.putText(image, prediction, (int(x + width/2), int(y + hight/2)),
+                        cv2.FONT_HERSHEY_PLAIN, 1.2, (0, 0, 0))
+    image = cv2.putText(image, prediction, (int(x + width/2-1), int(y + hight/2-1)),
+                        cv2.FONT_HERSHEY_PLAIN, 1.2, (row * 40, column * 40, 255))
+    image = cv2.rectangle(image, (x, y), (dx, dy), (255, 255, 255), 1)
+    return x, y, image
+
+def calc_prediction_position(hight, width, column, row):
+    x = (width * column) - column
+    y = (hight * row) - row
+    dx = x + width-1
+    dy = y + hight-1
+    return dx, dy, x, y
+
+def check_moving_path(image, image_origin, orbs, column, row):
+    if orbs[row] is None:
+        orbs[row] = [None] * 6
+    if orbs[row][column] is not None:
+        orbs = [None] * 5
+        orbs[row] = [None] * 6
+        image = image_origin.copy()
+    return image, orbs
+
 def solve_window(board_string, index, moves):
     #debug_window()
     id = index
-    
+    image_origin = screenshot()
     while True:
         index = id
         frame_array = []
-        image = screenshot()
+        image = image_origin.copy()
         column, row = calc_start_position(index)
         width = 76
         hight = 76
-        x = (width * column) - column
-        y = (hight * row) - row
-        dx = x + width-1
-        dy = y + hight-1
 
         prediction = board_string[index]
-        #print(prediction)
-        image = cv2.putText(image, prediction, (int(x + width/2), int(y + hight/2)),
-                            cv2.FONT_HERSHEY_PLAIN, 1.2, (0, 0, 0))
-        image = cv2.putText(image, prediction, (int(x + width/2-1), int(y + hight/2-1)),
-                            cv2.FONT_HERSHEY_PLAIN, 1.2, (row * 40, column * 40, 255))
-        image = cv2.rectangle(image, (x, y), (dx, dy), (255, 255, 255), 1)
+        #dx, dy, x, y = calc_prediction_position(hight, width, column, row)
+        x, y, image = draw_prediction(hight, width, column, row, image, prediction)
+        image_origin = image.copy()
         red = 255
         count = 0
+        orbs = [None] * 5
         for move_to in moves:
             count += 1
             shift = (count)%5
-            index, c, r = move_to.calc_position(index)
-            x2 = (width * c) - c + shift
-            y2 = (hight * r) - r + shift
-            image = add_arrowedLine(hight, image, red, width, x, x2, y, y2)
+            index, column, row = move_to.calc_position(index)
+            image, orbs = check_moving_path(image, image_origin, orbs, column, row)
+            x2 = (width * column) - column + shift
+            y2 = (hight * row) - row + shift
+            image = add_arrowedLine(image, red, hight, width, x, y, x2, y2)
             frame_array.append(image)
-            #cv2.imshow("Screenshot", image)
-            #cv2.waitKey(100)
 
-            #await asyncio.sleep(1)
-            #time.sleep(0.5)
+            if orbs[row][column] is None:
+                orbs[row][column] = True
             x = x2
             y = y2
             pass
-        fps = 0.5
+        fps = 1
         size = (452, 377)
         out = cv2.VideoWriter('solve.avi',cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
         for i in range(len(frame_array)):
@@ -144,18 +162,9 @@ def debug_window():
         for column in range(0, 6):
             width = 76
             hight = 76
-            x = (width * column) - column
-            y = (hight * row) - row
-            dx = x + width-1
-            dy = y + hight-1
-
             prediction = board_string[row * 6 + column]
-            #print(prediction)
-            image = cv2.putText(image, prediction, (int(x + width/2), int(y + hight/2)),
-                                cv2.FONT_HERSHEY_PLAIN, 1.2, (0, 0, 0))
-            image = cv2.putText(image, prediction, (int(x + width/2-1), int(y + hight/2-1)),
-                                cv2.FONT_HERSHEY_PLAIN, 1.2, (row * 40, column * 40, 255))
-            image = cv2.rectangle(image, (x, y), (dx, dy), (255, 255, 255), 1)
+            
+            x, y, image = draw_prediction(hight, width, column, row, image, prediction)
 
 
     cv2.imshow("Screenshot", image)
